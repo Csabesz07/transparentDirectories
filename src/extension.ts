@@ -1,26 +1,39 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
+const CONFIG_KEY = "transparentDirectories.keep"; // "active" | "open"
+
 export function activate(context: vscode.ExtensionContext) {
+  const refreshExplorer = async () => {
+    await vscode.commands.executeCommand(
+      "workbench.files.action.collapseExplorerFolders"
+    );
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "transparentDirectories" is now active!');
+    const mode = vscode.workspace
+      .getConfiguration()
+      .get<string>(CONFIG_KEY, "active");
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	const disposable = vscode.commands.registerCommand('transparentDirectories.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from TransparentDirectories!');
-	});
+    const targets =
+      mode === "open"
+        ? vscode.window.visibleTextEditors.map((e) => e.document.uri)
+        : vscode.window.activeTextEditor?.document.uri
+        ? [vscode.window.activeTextEditor.document.uri]
+        : [];
 
-	context.subscriptions.push(disposable);
+    for (const uri of targets) {
+      await vscode.commands.executeCommand("revealInExplorer", uri);
+    }
+  };
+
+  context.subscriptions.push(
+    vscode.window.onDidChangeActiveTextEditor(refreshExplorer),
+    vscode.workspace.onDidOpenTextDocument(refreshExplorer),
+    vscode.workspace.onDidCloseTextDocument(refreshExplorer),
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration(CONFIG_KEY)) refreshExplorer();
+    })
+  );
+
+  refreshExplorer();
 }
 
-// This method is called when your extension is deactivated
 export function deactivate() {}

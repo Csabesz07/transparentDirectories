@@ -1,7 +1,7 @@
 {
-  "name": "transparentDirectories",
-  "displayName": "TransparentDirectories",
-  "description": "",
+  "name": "transparent-directories",
+  "displayName": "Transparent Directories",
+  "description": "Keeps only the active file's folder (or all open files) expanded in the Explorer.",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.102.0"
@@ -9,15 +9,25 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onFileSystem:file"
+  ],
   "main": "./out/extension.js",
   "contributes": {
-    "commands": [
-      {
-        "command": "transparentDirectories.helloWorld",
-        "title": "Hello World"
+    "configuration": {
+      "title": "Transparent Directory",
+      "properties": {
+        "transparentDirectories.keep": {
+          "type": "string",
+          "enum": [
+            "active",
+            "open"
+          ],
+          "default": "active",
+          "description": "Choose 'active' to keep only the current file's folder open, or 'open' to keep all open files' folders expanded."
+        }
       }
-    ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

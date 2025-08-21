@@ -1,71 +1,45 @@
-# transparentDirectories README
+# Transparent Directories
 
-This is the README for your extension "transparentDirectories". After writing up a brief description, we recommend including the following sections.
+This is the README for the **Transparent Directories** extension. It keeps the Explorer tidy by collapsing folders that don’t contain the **active file** (or any **open files**, if you prefer). The result is a focused, “transparent” project tree where only the relevant paths stay expanded.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+- **Auto-collapse on file change**  
+  Whenever the active editor changes, the Explorer collapses folders that don’t contain the active file (or, optionally, any visible editors).
 
-For example if there is an image subfolder under your extension project workspace:
+- **Two keep modes**
 
-\!\[feature X\]\(images/feature-x.png\)
+  - **`active`** – keep only the active file’s folder and its ancestors open.
+  - **`open`** – keep the folders of **all open editors** (and their ancestors) open.
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+- **Multi-root aware**  
+  Works across all folders in a multi-root workspace.
+
+- **Low flicker**  
+  Minimizes UI churn by collapsing only folders outside the “keep” set.
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+- Visual Studio Code **1.102.0** or newer.
 
 ## Extension Settings
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+This extension contributes the following setting:
 
-For example:
+- `activeFolderManager.keep`  
+  Choose what to keep expanded in the Explorer.
 
-This extension contributes the following settings:
+  - **`active`** (default): keep only the current file’s folder (and its ancestors) expanded.
+  - **`open`**: keep all folders that contain **any** currently open editors (and their ancestors) expanded.
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+- `transparentDirectories.recursion`  
+  **Boolean** (default: `false`). When `true`, the extension collapses **all subfolders** under each non-kept branch (recursive). When `false`, it collapses **only the top-level** directory of each non-kept branch.
 
-## Known Issues
+**Example `settings.json`:**
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
-
-## Release Notes
-
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+```json
+{
+  "activeFolderManager.keep": "open",
+  "transparentDirectories.recursion": true
+}
+```

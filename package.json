@@ -25,6 +25,11 @@
           ],
           "default": "active",
           "description": "Choose 'active' to keep only the current file's folder open, or 'open' to keep all open files' folders expanded."
+        },
+        "transparentDirectories.recursion": {
+          "type": "boolean",
+          "default": false,
+          "description": "Collapse all the subfolders or just the top level directory"
         }
       }
     }

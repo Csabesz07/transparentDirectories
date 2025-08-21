@@ -1,7 +1,11 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import { KEEP_CONFIG_IDENTIFIER } from "./constants/variabels";
-import { getKeepConfiguration } from "./constants/functions";
+import {
+  getFileExcludeConfiguration,
+  getKeepConfiguration,
+  getRecursionConfiguration,
+} from "./constants/functions";
 
 export function activate(context: vscode.ExtensionContext) {
   onStartUp();
@@ -43,37 +47,71 @@ async function refreshExplorer() {
   const targets = getTargets(mode);
   const chains = targets.flatMap((t) => ancestorChains(t));
   const directoriesToCollapse = (
-    await Promise.all(chains.map((t) => getSubfolders(t)))
+    await Promise.all(
+      chains.flatMap(({ chains, ws }) =>
+        chains.map((t) => getSubfolders(t, ws))
+      )
+    )
   )
     .flat()
     .filter((x) => targets.some((t) => !t.fsPath.startsWith(x.fsPath)));
 
-  await vscode.commands.executeCommand("workbench.view.explorer");
+  const recursion = getRecursionConfiguration();
 
   for (let i = 0; i < directoriesToCollapse.length; i++) {
     const currentDirectory = directoriesToCollapse[i];
-    await vscode.commands.executeCommand("revealInExplorer", currentDirectory);
-    await vscode.commands.executeCommand("list.collapse");
+    await vscode.commands.executeCommand(
+      recursion
+        ? "explorer.collapseResourceRecursive"
+        : "explorer.collapseResource",
+      currentDirectory
+    );
   }
-
-  await vscode.commands.executeCommand(
-    "revealInExplorer",
-    vscode.window.activeTextEditor?.document.uri
-  );
 }
 
 /**
  * Get the subfolders of a directory
  * @param root The root URI
+ * @param ws Optional workspace-scope URI (for multi-root)
  * @returns An array of uris for the subfolders
  */
-async function getSubfolders(root: vscode.Uri): Promise<vscode.Uri[]> {
+async function getSubfolders(
+  root: vscode.Uri,
+  ws?: vscode.Uri
+): Promise<vscode.Uri[]> {
   const out: vscode.Uri[] = [];
-  const entries = await vscode.workspace.fs.readDirectory(root);
 
-  for (const [name, type] of entries) {
-    if (type === vscode.FileType.Directory) {
-      const child = vscode.Uri.joinPath(root, name);
+  // const includeGitignoreEntries = getGitignoreExcludeConfiguration();
+  const excludeRegexes = getFileExcludeConfiguration(ws).map((f) =>
+    globToRegExp(f)
+  );
+
+  const allEntries = await vscode.workspace.fs.readDirectory(root);
+
+  // @TODO: Implement .gitignore file exclude
+
+  for (const [name, type] of allEntries) {
+    if (type !== vscode.FileType.Directory) {
+      continue;
+    }
+
+    const child = vscode.Uri.joinPath(root, name);
+
+    const rel = vscode.workspace
+      .asRelativePath(child, false)
+      .replace(/\\/g, "/");
+
+    const relAlt = rel.startsWith("/") ? rel : "/" + rel;
+
+    const isExcluded = excludeRegexes.some(
+      (re) =>
+        re.test(rel) ||
+        re.test(rel + "/") ||
+        re.test(relAlt) ||
+        re.test(relAlt + "/")
+    );
+
+    if (!isExcluded) {
       out.push(child);
     }
   }
@@ -91,7 +129,10 @@ async function getSubfolders(root: vscode.Uri): Promise<vscode.Uri[]> {
  *     {... path: "a/b/c" ...}
  *   ]
  */
-function ancestorChains(root: vscode.Uri): vscode.Uri[] {
+function ancestorChains(root: vscode.Uri): {
+  chains: vscode.Uri[];
+  ws?: vscode.Uri;
+} {
   const ws = vscode.workspace.getWorkspaceFolder(root);
   const folder = vscode.Uri.file(path.dirname(root.fsPath));
   let out = [folder];
@@ -105,12 +146,10 @@ function ancestorChains(root: vscode.Uri): vscode.Uri[] {
       out.push(parentDirectory);
     } while (parentDirectory.fsPath.startsWith(ws.uri.fsPath + path.sep));
 
-    return out;
+    return { chains: out, ws: ws.uri };
   }
 
-  //@TODO: Implement no ws
-
-  return out;
+  return { chains: [] };
 }
 
 /**
@@ -124,6 +163,34 @@ function getTargets(mode: "open" | "active"): vscode.Uri[] {
     : vscode.window.activeTextEditor?.document.uri
     ? [vscode.window.activeTextEditor.document.uri]
     : [];
+}
+
+/**
+ * Convert a pattern into a regex
+ * @param glob The pattern which should be turned into a regex pattern
+ * @returns A regext pattern from the provided glob
+ */
+function globToRegExp(glob: string): RegExp {
+  const esc = (s: string) => s.replace(/[-/\\^$+?.()|[\]{}]/g, "\\$&");
+
+  let rx = "^";
+  for (let i = 0; i < glob.length; i++) {
+    const ch = glob[i];
+    if (ch === "*") {
+      if (glob[i + 1] === "*") {
+        rx += ".*";
+        i++;
+      } else {
+        rx += "[^/]*";
+      }
+    } else if (ch === "?") {
+      rx += ".";
+    } else {
+      rx += esc(ch);
+    }
+  }
+  rx += "$";
+  return new RegExp(rx);
 }
 
 export function deactivate() {}

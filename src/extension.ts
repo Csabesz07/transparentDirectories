@@ -1,42 +1,28 @@
 import * as vscode from "vscode";
 import * as path from "path";
-import { KEEP_CONFIG_IDENTIFIER } from "./constants/variabels";
+import {
+  KEEP_CONFIG_IDENTIFIER,
+  RECURSION_CONFIG_IDENTIFIER,
+} from "./constants/variabels";
 import {
   getFileExcludeConfiguration,
   getKeepConfiguration,
   getRecursionConfiguration,
 } from "./constants/functions";
+import { KeepOption } from "./constants/types";
 
-export function activate(context: vscode.ExtensionContext) {
-  onStartUp();
-
+export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.window.onDidChangeActiveTextEditor(refreshExplorer),
-    vscode.workspace.onDidOpenTextDocument(refreshExplorer),
-    vscode.workspace.onDidCloseTextDocument(refreshExplorer),
     vscode.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration(KEEP_CONFIG_IDENTIFIER)) {
+      if (
+        e.affectsConfiguration(KEEP_CONFIG_IDENTIFIER) ||
+        e.affectsConfiguration(RECURSION_CONFIG_IDENTIFIER)
+      ) {
         refreshExplorer();
       }
     })
   );
-}
-
-/**
- * Upon initialization all folders in the explorer should be closed
- * Than based on the keep settings the proper folders should be reopened
- */
-async function onStartUp() {
-  await vscode.commands.executeCommand(
-    "workbench.files.action.collapseExplorerFolders"
-  );
-
-  const mode = getKeepConfiguration();
-  const targets = getTargets(mode);
-
-  for (const uri of targets) {
-    await vscode.commands.executeCommand("revealInExplorer", uri);
-  }
 }
 
 /**
@@ -45,11 +31,11 @@ async function onStartUp() {
 async function refreshExplorer() {
   const mode = getKeepConfiguration();
   const targets = getTargets(mode);
-  const chains = targets.flatMap((t) => ancestorChains(t));
+  const chains = targets.map((t) => ancestorChains(t));
   const directoriesToCollapse = (
     await Promise.all(
       chains.flatMap(({ chains, ws }) =>
-        chains.map((t) => getSubfolders(t, ws))
+        chains.map(async (t) => await getSubfolders(t, ws))
       )
     )
   )
@@ -59,12 +45,11 @@ async function refreshExplorer() {
   const recursion = getRecursionConfiguration();
 
   for (let i = 0; i < directoriesToCollapse.length; i++) {
-    const currentDirectory = directoriesToCollapse[i];
     await vscode.commands.executeCommand(
       recursion
         ? "explorer.collapseResourceRecursive"
         : "explorer.collapseResource",
-      currentDirectory
+      directoriesToCollapse[i]
     );
   }
 }
@@ -120,14 +105,9 @@ async function getSubfolders(
 }
 
 /**
- * Generates all ancestor folder paths for a given file-system path.
+ * Generates all ancestor folder paths for a given file-system path and assigns the workspace if any exists.
  * @param root A file-system uri.
- * @returns An array of folder uris, e.g. for "a/b/c/file.txt" returns:
- *   [
- *     {... path: "a" ...},
- *     {... path: "a/b" ...},
- *     {... path: "a/b/c" ...}
- *   ]
+ * @returns An array of folder uris and their ws if any exists
  */
 function ancestorChains(root: vscode.Uri): {
   chains: vscode.Uri[];
@@ -157,7 +137,7 @@ function ancestorChains(root: vscode.Uri): {
  * @param mode Should come from the settings. Open for all open files or active for only the currently active file.
  * @returns A list of URIs for the files.
  */
-function getTargets(mode: "open" | "active"): vscode.Uri[] {
+function getTargets(mode: KeepOption): vscode.Uri[] {
   return mode === "open"
     ? vscode.window.visibleTextEditors.map((e) => e.document.uri)
     : vscode.window.activeTextEditor?.document.uri

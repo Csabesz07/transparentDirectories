@@ -4,15 +4,16 @@ import {
   KEEP_CONFIG_IDENTIFIER,
   RECURSION_CONFIG_IDENTIFIER,
 } from "./variabels";
+import { KeepOption } from "./types";
 
 /**
  * Get the keep configuration's current value
  * @returns 'active' or 'open' based on the 'transparentDirectories.keep' setting
  */
-export function getKeepConfiguration(): "open" | "active" {
+export function getKeepConfiguration(): KeepOption {
   return vscode.workspace
     .getConfiguration()
-    .get<"active" | "open">(KEEP_CONFIG_IDENTIFIER, "active");
+    .get<KeepOption>(KEEP_CONFIG_IDENTIFIER, "active");
 }
 
 /**

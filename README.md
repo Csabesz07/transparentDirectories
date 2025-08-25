@@ -18,6 +18,8 @@ This is the README for the **Transparent Directories** extension. It keeps the E
 - **Low flicker**  
   Minimizes UI churn by collapsing only folders outside the “keep” set.
 
+![Alt Text](./public/transparentDirectoriesDemo.gif)
+
 ## Requirements
 
 - Visual Studio Code **1.102.0** or newer.

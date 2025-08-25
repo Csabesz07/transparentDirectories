@@ -1,3 +1,7 @@
+<p align="center">
+  <img alt="transaprent directories logo" width="25%" src="./public/transparentDirectoriesLogo.png">
+</p>
+
 # Transparent Directories
 
 This is the README for the **Transparent Directories** extension. It keeps the Explorer tidy by collapsing folders that don’t contain the **active file** (or any **open files**, if you prefer). The result is a focused, “transparent” project tree where only the relevant paths stay expanded.

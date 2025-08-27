@@ -44,8 +44,8 @@ async function refreshExplorer() {
     new Map<string, vscode.Uri>(directoriesToCollapse.map((x) => [x.fsPath, x]))
   );
 
-  const filteredDirectoriesToCollapse = directoriesToCollapseUnique.filter((x) =>
-    targets.every((t) => !t.fsPath.startsWith(x[0]))
+  const filteredDirectoriesToCollapse = directoriesToCollapseUnique.filter(
+    (x) => targets.every((t) => !t.fsPath.startsWith(x[0]))
   );
 
   const recursion = getRecursionConfiguration();

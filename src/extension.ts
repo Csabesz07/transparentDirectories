@@ -38,18 +38,24 @@ async function refreshExplorer() {
         chains.map(async (t) => await getSubfolders(t, ws))
       )
     )
-  )
-    .flat()
-    .filter((x) => targets.some((t) => !t.fsPath.startsWith(x.fsPath)));
+  ).flat();
+
+  const directoriesToCollapseUnique = Array.from(
+    new Map<string, vscode.Uri>(directoriesToCollapse.map((x) => [x.fsPath, x]))
+  );
+
+  const filteredDirectoriesToCollapse = directoriesToCollapseUnique.filter((x) =>
+    targets.every((t) => !t.fsPath.startsWith(x[0]))
+  );
 
   const recursion = getRecursionConfiguration();
 
-  for (let i = 0; i < directoriesToCollapse.length; i++) {
+  for (let i = 0; i < filteredDirectoriesToCollapse.length; i++) {
     await vscode.commands.executeCommand(
       recursion
         ? "explorer.collapseResourceRecursive"
         : "explorer.collapseResource",
-      directoriesToCollapse[i]
+      filteredDirectoriesToCollapse[i]
     );
   }
 }
@@ -139,7 +145,7 @@ function ancestorChains(root: vscode.Uri): {
  */
 function getTargets(mode: KeepOption): vscode.Uri[] {
   return mode === "open"
-    ? vscode.window.visibleTextEditors.map((e) => e.document.uri)
+    ? getAllOpenFileUris()
     : vscode.window.activeTextEditor?.document.uri
     ? [vscode.window.activeTextEditor.document.uri]
     : [];
@@ -171,6 +177,48 @@ function globToRegExp(glob: string): RegExp {
   }
   rx += "$";
   return new RegExp(rx);
+}
+
+function getAllOpenFileUris(): vscode.Uri[] {
+  const out: vscode.Uri[] = [];
+  const seen = new Set<string>();
+  const add = (u?: vscode.Uri) => {
+    if (!u) {
+      return;
+    }
+
+    const key =
+      process.platform === "win32"
+        ? (u.fsPath || u.toString()).toLowerCase()
+        : u.fsPath || u.toString();
+
+    if (!seen.has(key)) {
+      seen.add(key);
+      out.push(u);
+    }
+  };
+
+  for (const ed of vscode.window.visibleTextEditors) {
+    add(ed.document.uri);
+  }
+
+  // @TODO: Include vscode.window.tabGroups.all as an option:
+  // for (const group of vscode.window.tabGroups.all) {
+  //   for (const tab of group.tabs) {
+  //     const input = tab.input as any;
+  //     if (input && input.uri) add(input.uri);
+  //   }
+  // }
+
+  for (const tab of vscode.window.tabGroups.activeTabGroup.tabs) {
+    const input = tab.input as any;
+
+    if (input && input.uri) {
+      add(input.uri);
+    }
+  }
+
+  return out;
 }
 
 export function deactivate() {}

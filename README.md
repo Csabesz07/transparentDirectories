@@ -45,7 +45,7 @@ This extension contributes the following setting:
 
 ```json
 {
-  "activeFolderManager.keep": "open",
+  "transparentDirectories.keep": "open",
   "transparentDirectories.recursion": true
 }
 ```

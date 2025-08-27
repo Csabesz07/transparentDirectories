@@ -50,12 +50,12 @@ async function refreshExplorer() {
 
   const recursion = getRecursionConfiguration();
 
-  for (let i = 0; i < filteredDirectoriesToCollapse.length; i++) {
+  for (const [_, uri] of filteredDirectoriesToCollapse) {
     await vscode.commands.executeCommand(
       recursion
         ? "explorer.collapseResourceRecursive"
         : "explorer.collapseResource",
-      filteredDirectoriesToCollapse[i]
+      uri
     );
   }
 }
